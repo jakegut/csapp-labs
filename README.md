@@ -6,6 +6,11 @@ Use the [student site](http://csapp.cs.cmu.edu/3e/students.html) for reference.
 
 _These aren't all of the labs, just those used in [CMU's Intro to Computer Systems](https://www.cs.cmu.edu/afs/cs/academic/class/15213-f15/www/schedule.html) course_
 
+## Required Packages
+```
+gcc-multilib
+```
+
 ## Labs and handouts in order
 |Lab|Handout|
 |---|---|
