@@ -248,8 +248,13 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  // return ((x ^ (~0)) >> 31) & 1;
-  return (x ^ (~0));
+  int mask = (x >> 16) | x;
+  mask |= (mask >> 8);
+  mask |= (mask >> 4);
+  mask |= (mask >> 2);
+  mask |= (mask >> 1);
+
+  return ((~mask) & 1);
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -264,7 +269,25 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  int s = (x >> 31);
+  x = ((~s) & x) | (s & ~x);
+
+  int bit16 = (!!(x >> 16)) << 4;
+  x >>= bit16;
+
+  int bit8 = (!!(x >> 8)) << 3;
+  x >>= bit8;
+
+  int bit4 = (!!(x >> 4)) << 2;
+  x >>= bit4;
+
+  int bit2 = (!!(x >> 2)) << 1;
+  x >>= bit2;
+
+  int bit1 = (!!(x >> 1));
+  x >>= bit1;
+  
+  return bit16 + bit8 + bit4 + bit2 + bit1 + x + 1;
 }
 //float
 /* 
@@ -279,7 +302,19 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  int s = (uf >> 31) & 1;
+  s <<= 31;
+  int exp = (uf >> 23) & 0xFF;
+  int frac = uf & 0x7FFFFF;
+
+  if (exp == 0xFF)
+    return uf;
+  else if (exp == 0)
+    return s | frac << 1;
+  else if (++exp == 0xFF)
+    return s | 0x7f800000;
+
+  return s | (exp << 23) | frac;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -294,7 +329,39 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  int s = (uf >> 31) & 1;
+  int exp = (uf >> 23) & 0xFF;
+  int frac = uf & 0x7FFFFF;
+
+  // All 0s
+  if(!(uf & 0x7fffffff))
+    return 0;
+
+  // NaN or inf
+  if (exp == 0xFF)
+    return 0x80000000u;
+  
+  // bias
+  exp -= 127;
+
+  // if res will be less than 0
+  if (exp < 0)
+    return 0;
+  // or out of range
+  else if (exp > 30)
+    return 0x80000000u;
+
+
+  frac |= (1 << 23);
+  if (exp >= 23)
+    frac = frac << (exp-23); //shift left if shift > 23
+  else
+    frac = frac >> (23-exp); //else we need to shift right
+
+  if (s)
+    return -frac;
+  
+  return frac;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -310,5 +377,16 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    
+    if (x < -149) {
+      return 0;
+    } else if (x < -126 && x >= -149) {
+      int bias = (-x - 126);
+      return 1 << (23 - bias);
+    } else if (x >= -126 && x <= 127){
+      return (x + 127) << 23;
+    } else {
+      return 0xFF << 23;
+    }
+    return 0;
 }
